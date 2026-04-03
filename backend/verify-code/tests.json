@@ -1,0 +1,1 @@
+{"tests": [{"name": "Verify code - missing params", "method": "POST", "path": "/", "body": {"phone": ""}, "expectedStatus": 400, "expectedBody": {"error": "Укажите номер и код"}, "bodyMatcher": "partial"}]}
