@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import Icon from "@/components/ui/icon";
 
 const CONTACTS = [
@@ -119,6 +120,16 @@ export default function Index() {
   const [showEmojiHint, setShowEmojiHint] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
+  const user = JSON.parse(localStorage.getItem("pulse_user") || '{"phone":"","name":"Пользователь"}');
+  const isPremium = localStorage.getItem("pulse_premium") === "true";
+
+  const userInitials = user.name
+    .split(" ")
+    .map((w: string) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase() || "П";
 
   const contact = CONTACTS.find((c) => c.id === activeChat)!;
   const chatMessages = messages[activeChat] || DEFAULT_MESSAGES;
@@ -203,8 +214,13 @@ export default function Index() {
 
         <div className="flex-1" />
 
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-400 to-pink-500 flex items-center justify-center text-white text-xs font-bold cursor-pointer hover:scale-105 transition-transform">
-          ЯП
+        <div className="relative">
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-400 to-pink-500 flex items-center justify-center text-white text-xs font-bold cursor-pointer hover:scale-105 transition-transform">
+            {userInitials}
+          </div>
+          {isPremium && (
+            <span className="absolute -top-1 -right-1 text-[10px]">👑</span>
+          )}
         </div>
       </aside>
 
@@ -299,9 +315,9 @@ export default function Index() {
       {/* Main area */}
       <main className="flex-1 flex flex-col z-10 relative min-w-0">
         {view === "profile" ? (
-          <ProfileView />
+          <ProfileView navigate={navigate} user={user} isPremium={isPremium} />
         ) : view === "settings" ? (
-          <SettingsView />
+          <SettingsView navigate={navigate} user={user} isPremium={isPremium} />
         ) : (
           <>
             {/* Chat header */}
@@ -451,16 +467,34 @@ export default function Index() {
   );
 }
 
-function ProfileView() {
+function ProfileView({ navigate, user, isPremium }: { navigate: ReturnType<typeof useNavigate>; user: { phone: string; name: string; createdAt?: number }; isPremium: boolean }) {
+  const initials = user.name
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase() || "П";
+
   return (
     <div className="flex-1 flex flex-col items-center justify-center p-8 animate-fade-in-up overflow-y-auto">
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center mb-8">
-          <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-violet-400 to-pink-500 flex items-center justify-center text-white text-3xl font-black mb-4 animate-float shadow-2xl shadow-violet-500/30">
-            ЯП
+          <div className="relative">
+            <div className={`w-24 h-24 rounded-3xl bg-gradient-to-br from-violet-400 to-pink-500 flex items-center justify-center text-white text-3xl font-black mb-4 shadow-2xl shadow-violet-500/30 ${isPremium ? "animate-pulse-glow" : "animate-float"}`}>
+              {initials}
+            </div>
+            {isPremium && (
+              <span className="absolute -top-1 -right-1 text-2xl">👑</span>
+            )}
           </div>
-          <h2 className="text-2xl font-black gradient-text">Яков Петров</h2>
-          <p className="text-white/40 text-sm mt-1">@petrov_ya</p>
+          <h2 className="text-2xl font-black gradient-text">{user.name}</h2>
+          {isPremium && (
+            <span className="mt-1 px-3 py-0.5 rounded-full text-xs font-bold gradient-bg text-white flex items-center gap-1">
+              <Icon name="Crown" size={12} />
+              Premium
+            </span>
+          )}
+          <p className="text-white/40 text-sm mt-1">@user_pulse</p>
           <div className="flex items-center gap-1 mt-2">
             <span className="w-2 h-2 bg-emerald-400 rounded-full online-dot" />
             <span className="text-xs text-emerald-400">В сети</span>
@@ -482,8 +516,8 @@ function ProfileView() {
 
         <div className="glass rounded-2xl p-4 space-y-4">
           {[
-            { icon: "Phone", label: "Телефон", value: "+7 (999) 123-45-67" },
-            { icon: "Mail", label: "Email", value: "petrov@pulse.app" },
+            { icon: "Phone", label: "Телефон", value: user.phone || "Не указан" },
+            { icon: "Mail", label: "Email", value: "user@pulse.app" },
             { icon: "MapPin", label: "Город", value: "Москва" },
           ].map((item) => (
             <div key={item.label} className="flex items-center gap-3">
@@ -498,7 +532,23 @@ function ProfileView() {
           ))}
         </div>
 
-        <button className="mt-4 w-full gradient-bg text-white font-semibold py-3 rounded-2xl hover:scale-[1.02] transition-transform shadow-lg shadow-violet-500/30">
+        {!isPremium ? (
+          <button
+            onClick={() => navigate("/subscription")}
+            className="mt-4 w-full flex items-center justify-center gap-2 glass border border-violet-500/30 text-white font-semibold py-3 rounded-2xl hover:scale-[1.02] transition-transform hover:bg-violet-500/10"
+          >
+            <Icon name="Crown" size={16} className="text-violet-400" />
+            <span className="gradient-text font-bold">Pulse Premium</span>
+          </button>
+        ) : (
+          <div className="mt-4 w-full glass border border-violet-500/20 rounded-2xl p-3 text-center">
+            <p className="text-sm gradient-text font-bold flex items-center justify-center gap-1">
+              <Icon name="Crown" size={14} /> Pulse Premium активен
+            </p>
+          </div>
+        )}
+
+        <button className="mt-3 w-full gradient-bg text-white font-semibold py-3 rounded-2xl hover:scale-[1.02] transition-transform shadow-lg shadow-violet-500/30">
           Редактировать профиль
         </button>
       </div>
@@ -506,7 +556,7 @@ function ProfileView() {
   );
 }
 
-function SettingsView() {
+function SettingsView({ navigate, user, isPremium }: { navigate: ReturnType<typeof useNavigate>; user: { phone: string; name: string; createdAt?: number }; isPremium: boolean }) {
   const [notifications, setNotifications] = useState(true);
   const [sounds, setSounds] = useState(true);
   const [twoFa, setTwoFa] = useState(false);
@@ -527,10 +577,56 @@ function SettingsView() {
     },
   ];
 
+  function handleLogout() {
+    localStorage.removeItem("pulse_user");
+    localStorage.removeItem("pulse_premium");
+    navigate("/auth", { replace: true });
+  }
+
   return (
     <div className="flex-1 overflow-y-auto p-6 animate-fade-in-up">
       <div className="max-w-lg mx-auto">
         <h2 className="text-xl font-black gradient-text mb-6">Настройки</h2>
+
+        {/* Subscription section */}
+        <div className="mb-5">
+          <p className="text-xs font-semibold text-white/30 uppercase tracking-widest mb-3 px-1">Подписка</p>
+          <button
+            onClick={() => navigate("/subscription")}
+            className="w-full glass rounded-2xl p-4 flex items-center gap-4 hover:bg-white/5 transition-colors group"
+          >
+            <div className="w-10 h-10 rounded-2xl gradient-bg flex items-center justify-center flex-shrink-0 animate-pulse-glow">
+              <Icon name="Crown" size={16} className="text-white" />
+            </div>
+            <div className="flex-1 min-w-0 text-left">
+              <p className="text-sm font-semibold text-white/90">Pulse Premium</p>
+              <p className="text-xs text-white/35 mt-0.5">
+                {isPremium ? "Подписка активна" : "Эксклюзивные бейджи, стикеры и многое другое"}
+              </p>
+            </div>
+            {isPremium ? (
+              <span className="px-2 py-1 rounded-lg text-[10px] font-bold gradient-bg text-white">Активна</span>
+            ) : (
+              <span className="text-xs gradient-text font-bold">20₽/мес</span>
+            )}
+          </button>
+        </div>
+
+        {/* Account info */}
+        <div className="mb-5">
+          <p className="text-xs font-semibold text-white/30 uppercase tracking-widest mb-3 px-1">Аккаунт</p>
+          <div className="glass rounded-2xl p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl gradient-bg flex items-center justify-center flex-shrink-0">
+                <Icon name="User" size={16} className="text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-white/90">{user.name}</p>
+                <p className="text-xs text-white/35 mt-0.5">{user.phone || "Телефон не указан"}</p>
+              </div>
+            </div>
+          </div>
+        </div>
 
         {sections.map((section) => (
           <div key={section.title} className="mb-5">
@@ -578,7 +674,10 @@ function SettingsView() {
           </div>
         </div>
 
-        <button className="w-full flex items-center gap-3 glass rounded-2xl p-4 hover:bg-red-500/10 transition-colors group">
+        <button
+          onClick={handleLogout}
+          className="w-full flex items-center gap-3 glass rounded-2xl p-4 hover:bg-red-500/10 transition-colors group"
+        >
           <div className="w-10 h-10 rounded-2xl bg-red-500/20 flex items-center justify-center flex-shrink-0 group-hover:bg-red-500/30 transition-colors">
             <Icon name="LogOut" size={16} className="text-red-400" />
           </div>
